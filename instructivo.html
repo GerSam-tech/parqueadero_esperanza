@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual — Parqueadero La Esperanza</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:#f4f7fc;color:#0d1b2e;line-height:1.65}
+  header{background:linear-gradient(135deg,#0650a8,#023a80);color:#fff;padding:48px 48px 40px}
+  header h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+  header p{opacity:.65;font-size:14px}
+  .badge{display:inline-block;background:rgba(255,255,255,.15);border-radius:999px;padding:3px 12px;font-size:11px;font-weight:600;letter-spacing:.5px;margin-top:12px}
+  main{max-width:900px;margin:0 auto;padding:40px 24px}
+  h2{font-size:18px;font-weight:700;color:#0650a8;margin:36px 0 12px;display:flex;align-items:center;gap:8px}
+  h2::before{content:attr(data-n);background:#0650a8;color:#fff;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+  h3{font-size:14px;font-weight:600;margin:18px 0 7px;color:#0d1b2e}
+  p{font-size:14px;margin-bottom:10px;color:#3d5065}
+  ul,ol{padding-left:20px;margin-bottom:12px}
+  li{font-size:14px;color:#3d5065;margin-bottom:5px}
+  .card{background:#fff;border-radius:12px;padding:22px 24px;margin-bottom:16px;box-shadow:0 2px 16px rgba(6,80,168,.08);border:1px solid #e2eaf5}
+  .card-title{font-size:13px;font-weight:700;color:#0650a8;margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px}
+  .file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:16px}
+  .file-card{background:#f4f7fc;border-radius:10px;padding:16px;border:1.5px solid #e2eaf5;cursor:pointer;transition:all .2s}
+  .file-card:hover{border-color:#0650a8;background:#e8f2ff}
+  .file-card .ico{font-size:28px;margin-bottom:8px}
+  .file-card .name{font-size:12px;font-weight:700;color:#0d1b2e;margin-bottom:4px;word-break:break-all}
+  .file-card .desc{font-size:11px;color:#b0c2dc}
+  .steps{display:flex;flex-direction:column;gap:12px}
+  .step{display:flex;gap:14px;align-items:flex-start}
+  .step-num{width:32px;height:32px;background:#0650a8;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+  .step-body{flex:1;padding-top:5px}
+  code{font-family:'JetBrains Mono',monospace;background:#e8f2ff;color:#0650a8;padding:2px 7px;border-radius:5px;font-size:12px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+  .pill-blue{background:#e8f2ff;color:#0650a8}
+  .pill-green{background:#e6f9f1;color:#15a86b}
+  .pill-orange{background:#fff3cd;color:#856404}
+  .pill-red{background:#fef0ef;color:#e0271a}
+  .alert{border-radius:10px;padding:14px 16px;margin:14px 0;display:flex;gap:10px;font-size:13px}
+  .alert-info{background:#e8f2ff;border-left:4px solid #0650a8;color:#023a80}
+  .alert-warn{background:#fff8e6;border-left:4px solid #f59e0b;color:#856404}
+  .alert-success{background:#e6f9f1;border-left:4px solid #15a86b;color:#0d5c38}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  th{background:#e8f2ff;color:#0650a8;padding:9px 13px;text-align:left;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+  td{padding:9px 13px;border-bottom:1px solid #e2eaf5;color:#3d5065}
+  tr:last-child td{border-bottom:none}
+  footer{text-align:center;padding:32px;color:#b0c2dc;font-size:12px;border-top:1px solid #e2eaf5;margin-top:40px}
+  @media print{body{background:#fff}.card{box-shadow:none;border:1px solid #e2eaf5}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 Parqueadero La Esperanza</h1>
+  <p>Sistema Inteligente de Control de Acceso — Manual de Usuario y Técnico</p>
+  <span class="badge">GERSAM AXIS • v1.0 • Abril 2026</span>
+</header>
+
+<main>
+
+  <!-- ░░ SECCIÓN 1 — DESCRIPCIÓN ░░ -->
+  <h2 data-n="1">Descripción General del Sistema</h2>
+  <div class="card">
+    <div class="card-title">¿Qué hace este sistema?</div>
+    <p>Parqueadero La Esperanza es una aplicación web completa para la gestión de acceso vehicular en conjuntos residenciales. Permite controlar entradas y salidas con verificación automática de restricciones, OCR simulado para lectura de placas, y generación de tiquetes.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <span class="pill pill-blue">React SPA</span>
+      <span class="pill pill-blue">Sin backend requerido</span>
+      <span class="pill pill-green">100% navegador</span>
+      <span class="pill pill-orange">Datos en memoria</span>
+    </div>
+  </div>
+
+  <!-- ░░ SECCIÓN 2 — MÓDULOS ░░ -->
+  <h2 data-n="2">Módulos del Sistema</h2>
+  <table>
+    <thead><tr><th>Módulo</th><th>Ícono</th><th>Función principal</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Control de Acceso</strong></td><td>🚗</td><td>Verificación de placas, OCR simulado, registro de entradas/salidas, impresión de tiquetes</td></tr>
+      <tr><td><strong>Dashboard</strong></td><td>📊</td><td>Estadísticas del día, últimos movimientos, resumen de denegaciones</td></tr>
+      <tr><td><strong>Vehículos</strong></td><td>🚙</td><td>Registro, edición y eliminación de vehículos. Gestión de restricciones (mora, convivencia)</td></tr>
+      <tr><td><strong>Historial</strong></td><td>📋</td><td>Log completo de todos los ingresos/salidas con estado y motivo de negación</td></tr>
+      <tr><td><strong>Celdas</strong></td><td>🅿️</td><td>Mapa visual de 24 celdas del parqueadero con estado ocupado/libre</td></tr>
+      <tr><td><strong>Pico y Placa</strong></td><td>🚦</td><td>Consulta de restricciones por dígito de placa según día de la semana (Bogotá)</td></tr>
+      <tr><td><strong>Búsqueda Archivos</strong></td><td>📁</td><td>Simulación de búsqueda de placa en archivos locales del sistema</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ░░ SECCIÓN 3 — ESTRUCTURA DE ARCHIVOS ░░ -->
+  <h2 data-n="3">Estructura de Archivos del Proyecto</h2>
+  <div class="file-grid">
+    <div class="file-card"><div class="ico">⚛️</div><div class="name">App.jsx</div><div class="desc">Componente principal — toda la lógica y UI</div></div>
+    <div class="file-card"><div class="ico">📦</div><div class="name">package.json</div><div class="desc">Dependencias y scripts de Vite + React</div></div>
+    <div class="file-card"><div class="ico">⚡</div><div class="name">vite.config.js</div><div class="desc">Configuración del bundler Vite</div></div>
+    <div class="file-card"><div class="ico">🌐</div><div class="name">index.html</div><div class="desc">Punto de entrada HTML para Vite</div></div>
+    <div class="file-card"><div class="ico">🎨</div><div class="name">index.css</div><div class="desc">Reset y estilos globales (vacío — todo está en JSX)</div></div>
+    <div class="file-card"><div class="ico">🚀</div><div class="name">main.jsx</div><div class="desc">Bootstrap de React en el DOM</div></div>
+    <div class="file-card"><div class="ico">📖</div><div class="name">Manual.html</div><div class="desc">Este instructivo (autocontenido)</div></div>
+  </div>
+
+  <!-- ░░ SECCIÓN 4 — INSTALACIÓN ░░ -->
+  <h2 data-n="4">Instalación y Puesta en Marcha</h2>
+  <div class="card">
+    <div class="card-title">Requisitos previos</div>
+    <ul>
+      <li><strong>Node.js</strong> versión 18 o superior — <a href="https://nodejs.org" style="color:#0650a8">nodejs.org</a></li>
+      <li><strong>npm</strong> 9+ (incluido con Node.js)</li>
+      <li>Navegador moderno: Chrome, Edge, Firefox o Safari</li>
+      <li>Conexión a internet (solo para fuentes de Google en desarrollo)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title">Pasos de instalación</div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Crear el proyecto</h3><p>Abre una terminal en la carpeta donde quieres guardar el proyecto y ejecuta:</p><code>npm create vite@latest parqueadero-la-esperanza -- --template react</code><br><br><code>cd parqueadero-la-esperanza</code></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Instalar dependencias</h3><code>npm install</code></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Reemplazar archivos</h3><p>Copia los archivos descargados (<code>App.jsx</code>, <code>main.jsx</code>, <code>index.css</code>, <code>index.html</code>) en las rutas correspondientes dentro de la carpeta del proyecto. Reemplaza los existentes.</p></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Iniciar en desarrollo</h3><code>npm run dev</code><p style="margin-top:8px">Abre el navegador en <code>http://localhost:5173</code></p></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-body"><h3>Compilar para producción</h3><code>npm run build</code><p style="margin-top:8px">Los archivos listos quedan en la carpeta <code>dist/</code>. Puedes subirlos a cualquier servidor web estático (Nginx, Apache, Vercel, Netlify).</p></div></div>
+    </div>
+  </div>
+  <div class="alert alert-info">
+    <span>ℹ️</span>
+    <div><strong>Modo demo:</strong> El sistema funciona completamente sin base de datos. Los datos están en memoria (se reinician al recargar la página). Para persistencia real, integrar con PHP/MySQL o SQLite como backend.</div>
+  </div>
+
+  <!-- ░░ SECCIÓN 5 — USO ░░ -->
+  <h2 data-n="5">Guía de Uso — Control de Acceso</h2>
+  <div class="card">
+    <div class="card-title">Flujo de ingreso de un vehículo</div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Captura de placa</h3><p>Haga clic en <strong>📸 Capturar OCR</strong> para simular la lectura de placa por cámara. En producción, conecte la cámara IP al módulo OCR real (OpenALPR / EasyOCR).</p></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Verificación automática</h3><p>El sistema consulta si la placa está registrada y evalúa: <span class="pill pill-red">Mora de mensualidades</span> <span class="pill pill-red">Restricción de convivencia</span> <span class="pill pill-orange">Pico y placa activo</span></p></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Seleccionar tipo de movimiento</h3><p>Elija <strong>ENTRADA</strong> o <strong>SALIDA</strong> en el selector.</p></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Registrar</h3><p>Haga clic en <strong>✅ Registrar ENTRADA/SALIDA</strong>. El sistema guarda el movimiento y emite una notificación.</p></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-body"><h3>Imprimir tiquete</h3><p>Haga clic en <strong>🖨️ Imprimir Tiquete</strong> para enviar a la impresora POS térmica (en producción usa la API de impresión del navegador).</p></div></div>
+    </div>
+  </div>
+
+  <!-- ░░ SECCIÓN 6 — REGLAS DE NEGOCIO ░░ -->
+  <h2 data-n="6">Reglas de Negocio y Validaciones</h2>
+  <table>
+    <thead><tr><th>Condición</th><th>Resultado</th><th>Configurable</th></tr></thead>
+    <tbody>
+      <tr><td>Placa no registrada</td><td><span class="pill pill-orange">Alerta — Ofrecer registro</span></td><td>✓</td></tr>
+      <tr><td>Mensualidad atrasada ≥ 1 mes</td><td><span class="pill pill-red">Acceso Denegado</span></td><td>✓ por vehículo</td></tr>
+      <tr><td>Conflicto de convivencia activo</td><td><span class="pill pill-red">Acceso Denegado</span></td><td>✓ por vehículo</td></tr>
+      <tr><td>Pico y placa (dígito + hora)</td><td><span class="pill pill-red">Acceso Denegado</span></td><td>✓ (editar array PICO)</td></tr>
+      <tr><td>Vehículo inhabilitado</td><td><span class="pill pill-red">Acceso Denegado</span></td><td>✓ campo activo</td></tr>
+      <tr><td>Sin restricciones</td><td><span class="pill pill-green">Acceso Permitido</span></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ░░ SECCIÓN 7 — PERSONALIZACIÓN ░░ -->
+  <h2 data-n="7">Personalización del Sistema</h2>
+  <div class="card">
+    <div class="card-title">Cambiar nombre del conjunto / parqueadero</div>
+    <p>En <code>App.jsx</code>, busca todas las ocurrencias de <code>"PARQUEADERO LA ESPERANZA"</code> y <code>"Parqueadero La Esperanza"</code> y reemplázalas con el nombre real.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">Modificar calendario de Pico y Placa</div>
+    <p>Edita el objeto <code>PICO</code> al inicio de <code>App.jsx</code>. Las claves son el día de la semana (0=Dom, 1=Lun… 6=Sáb) y el valor es un array con los dígitos restringidos:</p>
+    <code>const PICO = &#123; 1:[3,4], 2:[5,6], 3:[7,8], 4:[9,0], 5:[1,2], 0:[], 6:[] &#125;;</code>
+  </div>
+  <div class="card">
+    <div class="card-title">Agregar vehículos iniciales</div>
+    <p>Edita el array <code>DB.vehiculos</code> al inicio de <code>App.jsx</code> con los datos reales del conjunto residencial.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">Número de celdas</div>
+    <p>Cambia el número <code>24</code> en <code>Array.from(&#123;length:24&#125;,...)</code> dentro de <code>DB.celdas</code> por el número real de celdas del parqueadero.</p>
+  </div>
+  <div class="alert alert-warn">
+    <span>⚠️</span>
+    <div><strong>Integración OCR real:</strong> Para conectar una cámara IP con reconocimiento de placas real, reemplaza la función <code>simularOCR()</code> con una llamada a la API de OpenALPR, EasyOCR o la solución OCR del cliente.</div>
+  </div>
+
+  <!-- ░░ SECCIÓN 8 — ARQUITECTURA ░░ -->
+  <h2 data-n="8">Arquitectura Técnica</h2>
+  <table>
+    <thead><tr><th>Componente</th><th>Tecnología</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr><td>UI / Lógica</td><td>React 18 + Hooks</td><td>useState, useEffect — sin Redux</td></tr>
+      <tr><td>Bundler</td><td>Vite 5</td><td>HMR en desarrollo, ESM en producción</td></tr>
+      <tr><td>Estilos</td><td>CSS-in-JS (objetos de estilo)</td><td>Sin Tailwind, sin módulos CSS</td></tr>
+      <tr><td>Fuentes</td><td>Exo 2 + JetBrains Mono</td><td>Google Fonts (CDN)</td></tr>
+      <tr><td>Almacenamiento</td><td>Estado React (memoria)</td><td>Migrar a IndexedDB / PHP para persistencia</td></tr>
+      <tr><td>Notificaciones</td><td>Toast interno</td><td>Componente propio, sin dependencias</td></tr>
+      <tr><td>OCR</td><td>Simulado (aleatorio)</td><td>Reemplazar con OpenALPR o EasyOCR</td></tr>
+      <tr><td>Impresión</td><td>window.print() / POS API</td><td>Integrar con ESC/POS para térmica</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ░░ SECCIÓN 9 — ROADMAP ░░ -->
+  <h2 data-n="9">Próximas Mejoras Sugeridas</h2>
+  <div class="steps">
+    <div class="step"><div class="step-num">A</div><div class="step-body"><h3>Backend PHP/MySQL</h3><p>Migrar datos de memoria a base de datos real para persistencia entre sesiones y múltiples dispositivos.</p></div></div>
+    <div class="step"><div class="step-num">B</div><div class="step-body"><h3>OCR real con OpenALPR</h3><p>Conectar cámara IP y reemplazar <code>simularOCR()</code> con llamada a API de reconocimiento de placas.</p></div></div>
+    <div class="step"><div class="step-num">C</div><div class="step-body"><h3>Módulo de cobro de mensualidades</h3><p>Panel de cartera con vencimientos, envío de recordatorios por WhatsApp (CallMeBot) y registro de pagos.</p></div></div>
+    <div class="step"><div class="step-num">D</div><div class="step-body"><h3>Reportes PDF con ReportLab / jsPDF</h3><p>Exportación de historial mensual, estado de cartera y tiquetes en PDF con membrete del conjunto.</p></div></div>
+    <div class="step"><div class="step-num">E</div><div class="step-body"><h3>App móvil para portería</h3><p>Versión PWA con acceso a cámara del dispositivo para captura OCR sin cámara IP.</p></div></div>
+  </div>
+
+  <!-- ░░ SECCIÓN 10 — SOPORTE ░░ -->
+  <h2 data-n="10">Soporte y Contacto</h2>
+  <div class="card">
+    <div class="card-title">Desarrollado por</div>
+    <p><strong>GERSAM AXIS</strong> — Soluciones de Software para Conjuntos Residenciales y Gestión Empresarial</p>
+    <p style="margin-top:8px">Marca <strong>SofMacyMas</strong> — Soluciones digitales para comunidades residenciales en Colombia</p>
+    <div class="alert alert-success" style="margin-top:14px">
+      <span>✅</span>
+      <div>Para soporte técnico, personalización o integración con backend, contacte al equipo de GERSAM AXIS.</div>
+    </div>
+  </div>
+
+</main>
+<footer>
+  Parqueadero La Esperanza — Sistema de Control de Acceso • GERSAM AXIS © 2026 • Todos los derechos reservados
+</footer>
+</body>
+</html>

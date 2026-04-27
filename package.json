@@ -1,0 +1,24 @@
+{
+  "name": "parqueadero-la-esperanza",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Sistema de Control de Acceso — Parqueadero La Esperanza | GERSAM AXIS",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.2"
+  }
+}
