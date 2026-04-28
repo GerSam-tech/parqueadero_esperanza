@@ -492,29 +492,36 @@ const normalizarPlaca = raw => {
 
 const activarCamara = async () => {
   try {
-    // ✅ Cerrar stream previo REAL
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
+    // 🔴 Cerrar stream previo si existe
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
     }
 
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: { ideal: "environment" }, // ✅ CORRECTO
+        facingMode: { exact: "environment" }, // ✅ fuerza trasera
         width: { ideal: 1280 },
         height: { ideal: 720 }
       },
       audio: false
     });
 
-    streamRef.current = stream;              // ✅ CLAVE
     videoRef.current.srcObject = stream;
     await videoRef.current.play();
     setCameraOn(true);
 
-  } catch (err) {
-    console.error("Error cámara:", err);
-    setCameraError("No se pudo acceder a la cámara trasera");
+  } catch (error) {
+    console.warn("Exact environment falló, usando fallback", error);
+
+    // 🟡 Fallback (iOS antiguos / algunos Android)
+    const fallbackStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false
+    });
+
+    videoRef.current.srcObject = fallbackStream;
+    await videoRef.current.play();
+    setCameraOn(true);
   }
 };
 
@@ -728,10 +735,13 @@ const cambiarCamara = async (modo) => {
                               justifyContent: "center",
                             }}
                           >
-                            
-                            <button onClick={() => cambiarCamara("environment")}>Trasera</button>
-                            <button onClick={() => cambiarCamara("user")}>Frontal</button>
+                            <button onClick={() => cambiarCamara("environment")}>
+                              📷 Trasera
+                            </button>
 
+                            <button onClick={() => cambiarCamara("user")}>
+                              🤳 Frontal
+                            </button>
                           </div>
                         </div>
                       )}
