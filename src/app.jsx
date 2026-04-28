@@ -489,42 +489,42 @@ const normalizarPlaca = raw => {
   
 
 
+
 const activarCamara = async () => {
-  setCameraError("");
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    setCameraError("Este navegador no soporta acceso a cámara.");
-    return;
-  }
-
   try {
-    // ✅ 1. Forzar solicitud de permiso (CLAVE)
-    const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
-    testStream.getTracks().forEach(t => t.stop());
+    // 🔴 Cerrar stream previo si existe
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+    }
 
-    // ✅ 2. Abrir stream real
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { exact: "environment" }, // ✅ fuerza trasera
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    });
 
-    streamRef.current = stream;
-
-    // ✅ 3. Enlazar al video (con pequeño delay para React)
-    setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      }
-    }, 150);
-
+    videoRef.current.srcObject = stream;
+    await videoRef.current.play();
     setCameraOn(true);
-  } catch (err) {
-    console.error("ERROR CÁMARA:", err);
-    setCameraError(
-      err.name === "NotAllowedError"
-        ? "Permiso de cámara denegado."
-        : "No se pudo acceder a la cámara."
-    );
+
+  } catch (error) {
+    console.warn("Exact environment falló, usando fallback", error);
+
+    // 🟡 Fallback (iOS antiguos / algunos Android)
+    const fallbackStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false
+    });
+
+    videoRef.current.srcObject = fallbackStream;
+    await videoRef.current.play();
+    setCameraOn(true);
   }
 };
+
 
   
   const detenerCamara = () => {
@@ -585,7 +585,12 @@ const activarCamara = async () => {
   return canvas.toDataURL("image/png");
 };
 
+
 const cambiarCamara = async (modo) => {
+  if (videoRef.current?.srcObject) {
+    videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+  }
+
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: modo },
     audio: false
@@ -730,13 +735,10 @@ const cambiarCamara = async (modo) => {
                               justifyContent: "center",
                             }}
                           >
-                            <button onClick={() => cambiarCamara("environment")}>
-                              📷 Trasera
-                            </button>
+                            
+                            <button onClick={() => cambiarCamara("environment")}>Trasera</button>
+                            <button onClick={() => cambiarCamara("user")}>Frontal</button>
 
-                            <button onClick={() => cambiarCamara("user")}>
-                              🤳 Frontal
-                            </button>
                           </div>
                         </div>
                       )}
