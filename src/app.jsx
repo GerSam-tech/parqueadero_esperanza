@@ -585,7 +585,14 @@ const activarCamara = async () => {
   return canvas.toDataURL("image/png");
 };
 
+const cambiarCamara = async (modo) => {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: modo },
+    audio: false
+  });
 
+  videoRef.current.srcObject = stream;
+};
 
   return (
     <div style={s.root}>
@@ -698,19 +705,44 @@ const activarCamara = async () => {
                     ) : (
                       <>
                         
-                        <video
-                          ref={videoRef}
-                          muted
-                          autoPlay
-                          playsInline
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            borderRadius: 10,
-                          }}
+                        
+                      {cameraOn && (
+                        <div style={{ position: "relative" }}>
+                          <video
+                            ref={videoRef}
+                            muted
+                            autoPlay
+                            playsInline
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              borderRadius: 10,
+                            }}
+                          />
 
-                        />
+                          {/* ✅ BOTONES DE CÁMARA */}
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 10,
+                              marginTop: 10,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <button onClick={() => cambiarCamara("environment")}>
+                              📷 Trasera
+                            </button>
+
+                            <button onClick={() => cambiarCamara("user")}>
+                              🤳 Frontal
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+
+                        
                         
                         {/* ✅ CANVAS OCULTO PARA OCR */}
                             <canvas
