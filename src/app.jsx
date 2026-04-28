@@ -492,53 +492,46 @@ const normalizarPlaca = raw => {
 
 const activarCamara = async () => {
   try {
-    // ✅ Cerrar stream previo
+    // ✅ Cerrar stream previo REAL
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
 
-    const deviceId = await getCamaraTrasera();
-
-    if (!deviceId) {
-      setCameraError("No se encontró cámara trasera");
-      return;
-    }
-
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        deviceId: { exact: deviceId },
+        facingMode: { ideal: "environment" }, // ✅ CORRECTO
         width: { ideal: 1280 },
         height: { ideal: 720 }
       },
       audio: false
     });
 
-    streamRef.current = stream;
+    streamRef.current = stream;              // ✅ CLAVE
     videoRef.current.srcObject = stream;
     await videoRef.current.play();
     setCameraOn(true);
 
   } catch (err) {
-    console.error(err);
-    setCameraError("No se pudo activar la cámara trasera");
+    console.error("Error cámara:", err);
+    setCameraError("No se pudo acceder a la cámara trasera");
   }
 };
 
 
   
-  
-const detenerCamara = () => {
-  if (streamRef.current) {
-    streamRef.current.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-  }
-  if (videoRef.current) {
-    videoRef.current.srcObject = null;
-  }
-  setCameraOn(false);
-};
+  const detenerCamara = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
 
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraOn(false);
+  };
 
 
   const capturarFrame = () => {
@@ -586,57 +579,18 @@ const detenerCamara = () => {
 };
 
 
-
-
 const cambiarCamara = async (modo) => {
-  if (streamRef.current) {
-    streamRef.current.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-  }
-
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const cams = devices.filter(d => d.kind === "videoinput");
-
-  let selected;
-
-  if (modo === "environment") {
-    selected = cams.find(c => /back|rear|environment/i.test(c.label)) || cams[cams.length - 1];
-  } else {
-    selected = cams.find(c => /front|user/i.test(c.label)) || cams[0];
+  if (videoRef.current?.srcObject) {
+    videoRef.current.srcObject.getTracks().forEach(t => t.stop());
   }
 
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { deviceId: { exact: selected.deviceId } },
+    video: { facingMode: modo },
     audio: false
   });
 
-  streamRef.current = stream;
   videoRef.current.srcObject = stream;
-  await videoRef.current.play();
 };
-
-
-
-const getCamaraTrasera = async () => {
-  // 1️⃣ Pedir permiso mínimo (necesario para ver labels)
-  const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-  tempStream.getTracks().forEach(t => t.stop());
-
-  // 2️⃣ Listar dispositivos
-  const devices = await navigator.mediaDevices.enumerateDevices();
-
-  const cameras = devices.filter(d => d.kind === "videoinput");
-
-  // 3️⃣ Intentar encontrar cámara trasera por nombre
-  const trasera =
-    cameras.find(c =>
-      /back|rear|environment/i.test(c.label)
-    ) || cameras[cameras.length - 1]; // fallback: última cámara
-
-  return trasera?.deviceId;
-};
-
-
 
   return (
     <div style={s.root}>
