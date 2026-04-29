@@ -19,8 +19,59 @@ const DB = {
   celdas: Array.from({length:24},(_,i)=>({ id:i+1, codigo:`C-${String(i+1).padStart(3,'0')}`, torre:String.fromCharCode(65+Math.floor(i/8)), apto:`${(i%8+1)*100+Math.floor(i/8)*100+1}`, ocupada:[2,5,9,14,17].includes(i+1), vehiculo_id:null })),
 };
 
-const PICO = { 0:[1,2],1:[3,4],2:[5,6],3:[7,8],4:[9,0],5:[],6:[] };
+const REGLAS_PICO_PLACA_MEDELLIN = {
+  0: [], // Domingo
+  1: [1, 7], // Lunes
+  2: [0, 3], // Martes
+  3: [4, 6], // Miércoles
+  4: [5, 9], // Jueves
+  5: [2, 8], // Viernes
+  6: []  // Sábado
+};
 const DIAS_FULL = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+const validarPicoYPlacaHoy = (placa, tipoVehiculo, dateObj = new Date()) => {
+  const dia = dateObj.getDay();
+  const reglasDelDia = REGLAS_PICO_PLACA_MEDELLIN[dia] || [];
+  
+  if (reglasDelDia.length === 0) return { activa: false, mensaje: "Hoy no hay pico y placa." };
+  
+  const h = dateObj.getHours();
+  // Horario unificado: 5:00 a.m. a 8:00 p.m. (5 a 19 horas inclusives)
+  const dentroDeHorario = h >= 5 && h < 20;
+
+  const soloNumeros = placa.replace(/[^0-9]/g, '');
+  if (!soloNumeros) return { activa: false, mensaje: "Placa sin números." };
+
+  let digitoEvaluar = -1;
+  const tipoStr = (tipoVehiculo || "carro").toLowerCase();
+  
+  if (tipoStr.includes("moto")) {
+    digitoEvaluar = parseInt(soloNumeros[0]); // Primer número para motos
+  } else {
+    digitoEvaluar = parseInt(soloNumeros[soloNumeros.length - 1]); // Último número para carros/otros
+  }
+
+  const tieneRestriccion = reglasDelDia.includes(digitoEvaluar);
+  const activa = tieneRestriccion && dentroDeHorario;
+  
+  const nombreDia = DIAS_FULL[dia].toLowerCase();
+  const stringReglas = reglasDelDia.join(" y ");
+  const digitoUsadoStr = tipoStr.includes("moto") ? "el primer número" : "el último número";
+
+  let mensaje = "";
+  if (tieneRestriccion) {
+    if (dentroDeHorario) {
+      mensaje = `Hoy ${nombreDia} entre 5:00 a.m. y 8:00 p.m. no pueden circular ${tipoStr}s con ${digitoUsadoStr} en ${stringReglas}. (Afecta placa ${placa} - dígito ${digitoEvaluar})`;
+    } else {
+      mensaje = `Restricción para dígitos ${stringReglas} (hoy ${nombreDia}), pero está fuera del horario (5:00 a.m. a 8:00 p.m.). Puede circular.`;
+    }
+  } else {
+    mensaje = `Dígito ${digitoEvaluar} sin restricción hoy ${nombreDia}.`;
+  }
+
+  return { activa, mensaje, digitoEvaluar, tieneRestriccion, reglasDelDia, dentroDeHorario, tipoStr };
+};
 
 function useTime() {
   const [now, setNow] = useState(new Date());
@@ -78,6 +129,10 @@ export default function App() {
   const [modalV, setModalV] = useState(false);
   const [editV, setEditV] = useState(null);
   const [formV, setFormV] = useState({placa:"",propietario:"",residente:"",torre:"",apto:"",tipo:"Carro",correo:"",whatsapp:"",mensualidad_atrasada:false,meses_atrasados:0,conflicto_convivencia:false,observaciones:""});
+
+  // Modal Celda
+  const [modalCelda, setModalCelda] = useState(null);
+  const [celdaSelectPlaca, setCeldaSelectPlaca] = useState("");
 
   // Pico
   const [picoInput, setPicoInput] = useState("");
@@ -143,19 +198,14 @@ export default function App() {
   }
 
   // 4️⃣ Pico y placa
-  const hoy = now.getDay();
-  const digitosRestringidos = PICO[hoy] || [];
-  const hora = now.getHours();
+  const picoValidacion = validarPicoYPlacaHoy(v.placa, v.tipo, now);
 
-  const enPico =
-  digitosRestringidos.includes(parseInt(v.placa.slice(-1))) &&
-    ((hora >= 6 && hora < 9) || (hora >= 15 && hora < 19));
-
-  if (enPico) {
+  if (picoValidacion.activa) {
     setAccessStatus({
       tipo: "denied",
-      titulo: "ACCESO DENEGADO",
-      motivo: `Pico y placa activo — dígito ${v.placa.slice(-1)}`,
+      titulo: "PICO Y PLACA ACTIVO",
+      motivo: picoValidacion.mensaje,
+      isPicoYPlaca: true, // Para el override
     });
     return false;
   }
@@ -241,6 +291,50 @@ const imprimirTiquete = () => {
   ventana.print();
 };
 
+const imprimirTiqueteHistorial = (item) => {
+  const contenido = `
+    <html>
+      <head>
+        <title>Tiquete Parqueadero</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            width: 280px;
+            margin: auto;
+          }
+          h2 {
+            text-align: center;
+          }
+          .line {
+            border-bottom: 1px dashed #000;
+            margin: 8px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <h2>Parqueadero La Esperanza</h2>
+        <div class="line"></div>
+        <p><b>Placa:</b> ${item.placa}</p>
+        <p><b>Tipo:</b> ${item.tipo}</p>
+        <p><b>Fecha:</b> ${item.fecha_hora}</p>
+        <p><b>Estado:</b> ${item.permitido ? "ACCESO PERMITIDO" : "ACCESO DENEGADO"}</p>
+        ${item.motivo_negacion ? `<p><b>Motivo:</b> ${item.motivo_negacion}</p>` : ''}
+        <div class="line"></div>
+        <p style="text-align:center">Gracias por su visita</p>
+      </body>
+    </html>
+  `;
+
+  const ventana = window.open("", "_blank");
+  if (ventana) {
+    ventana.document.write(contenido);
+    ventana.document.close();
+    ventana.print();
+  } else {
+    toast("Por favor, permita las ventanas emergentes para imprimir", "warning");
+  }
+};
+
 const generarPDF = () => {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -284,33 +378,58 @@ const realizarOCR = async () => {
   toast("🔎 Analizando imagen...", "info");
 
   try {
-    const { data } = await Tesseract.recognize(
-      image,
-      "eng",
-      {
-        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-      }
-    );
+    const { data } = await Tesseract.recognize(image, "eng", {
+      logger: m => console.log(m),
+      // Sin restricciones estrictas para permitir capturar tanto la placa como la ciudad en múltiples líneas
+    });
 
+    const textoBruto = data.text.toUpperCase();
+    const sinEspacios = textoBruto.replace(/[^A-Z0-9]/g, "");
     
-      const textoOCR = data.text
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, ""); // limpia ruido
+    let placaLimpia = null;
 
-      const posibles = textoOCR.match(
-        /[A-Z]{3}[0-9]{3}|[A-Z]{3}[0-9]{2}[A-Z]/g
-      );
+    if (sinEspacios.length >= 6) {
+        const todosLosBloques = [];
+        for(let i=0; i <= sinEspacios.length - 6; i++){
+            let b = sinEspacios.substring(i, i+6);
+            // Aplicar correcciones OCR comunes asumiendo formato AAA000 o AAA00A
+            let letras = b.substring(0,3).replace(/0/g, "O").replace(/1/g, "I").replace(/5/g, "S").replace(/8/g, "B");
+            let numeros = b.substring(3,5).replace(/O/g, "0").replace(/I/g, "1").replace(/S/g, "5").replace(/B/g, "8").replace(/Z/g, "2").replace(/G/g, "6");
+            let ultimo = b.substring(5,6);
+            let bCorregido = letras + numeros + ultimo;
+            todosLosBloques.push({ original: b, corregido: bCorregido });
+        }
 
-      if (posibles && posibles.length) {
-        const placa = posibles[0];
-        setInputPlaca(placa);
-        buscarPlaca(placa);
-        toast(`✅ Placa detectada: ${placa}`, "success");
-      } else {
-        toast("⚠ No se detectó una placa válida", "warning");
-      }
+        // Buscar placa ideal (3 letras, 2 números, 1 num/letra)
+        let candidato = todosLosBloques.find(b => /^[A-Z]{3}[0-9]{2}[A-Z0-9]$/.test(b.corregido));
+        
+        // Si no hay ideal, buscamos casi ideal (3 letras y luego al menos 1 número)
+        if (!candidato) {
+            candidato = todosLosBloques.find(b => /^[A-Z]{3}[0-9]/.test(b.corregido));
+        }
+        
+        // Si tampoco, nos quedamos con el primer bloque que tenga números
+        if (!candidato) {
+            candidato = todosLosBloques.find(b => /[0-9]/.test(b.corregido)) || todosLosBloques[0];
+        }
 
+        placaLimpia = candidato.corregido;
+    }
 
+    if (placaLimpia) {
+        // Extraer la ciudad original
+        const palabras = textoBruto.split(/[\s\n]+/).map(w => w.replace(/[^A-Z]/g, ''));
+        const posiblesCiudades = palabras.filter(w => w.length > 4 && !placaLimpia.includes(w));
+        const ciudad = posiblesCiudades.length > 0 ? posiblesCiudades[0] : "Desconocida";
+        
+        setInputPlaca(placaLimpia);
+        buscarPlaca(placaLimpia);
+        
+        toast(`✅ Placa: ${placaLimpia} - Origen: ${ciudad}`, "success");
+    } else {
+        const leido = textoBruto.trim().length > 0 ? textoBruto.substring(0,25) : "(vacío)";
+        toast(`⚠ No se detectó una placa. Lectura: ${leido}`, "warning");
+    }
 
   } catch (err) {
     console.error("OCR ERROR:", err);
@@ -333,9 +452,28 @@ const normalizarPlaca = raw => {
   const registrarIngreso = () => {
     const placa = inputPlaca.toUpperCase().trim();
     if(!placa){ toast("Ingrese o capture una placa","warning"); return; }
+    
+    let permitido = accessStatus.tipo === "allowed";
+    let motivo = accessStatus.tipo === "denied" ? accessStatus.motivo : "";
+    
+    if (accessStatus.tipo === "denied") {
+        if (accessStatus.isPicoYPlaca) {
+            const confirmar = window.confirm(`Vehículo con Pico y Placa activo.\n\n${motivo}\n\n¿Desea autorizar el ingreso bajo su responsabilidad?`);
+            if (confirmar) {
+                permitido = true;
+                motivo = "Ingreso autorizado manualmente (Ignoró Pico y Placa)";
+                toast("Ingreso autorizado manualmente", "warning");
+            } else {
+                toast(`❌ Acceso DENEGADO — Pico y Placa`, "error");
+                return;
+            }
+        } else {
+            toast(`❌ Acceso DENEGADO — ${motivo}`, "error");
+            return;
+        }
+    }
+
     const v = vehiculos.find(x=>x.placa===placa);
-    const permitido = accessStatus.tipo==="allowed";
-    const motivo = accessStatus.tipo==="denied" ? accessStatus.motivo : "";
     const nuevo = { id:ingresos.length+1, placa, tipo:tipoMov,
       fecha_hora: now.toLocaleDateString("es-CO")+" "+now.toLocaleTimeString("es-CO"),
       permitido, motivo_negacion:motivo,
@@ -346,8 +484,7 @@ const normalizarPlaca = raw => {
       mensaje:`${permitido?"✅":"❌"} ${tipoMov}: ${placa} — ${now.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})}`,
       leida:false, fecha:now.toLocaleDateString("es-CO")+" "+now.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"}) };
     setNotificaciones(p=>[noti,...p]);
-    if(permitido) toast(`✅ ${tipoMov} registrada: ${placa}`,"success");
-    else toast(`❌ Acceso DENEGADO — ${motivo}`,"error");
+    if(permitido && !accessStatus.isPicoYPlaca) toast(`✅ ${tipoMov} registrada: ${placa}`,"success");
   };
 
   const guardarVehiculo = () => {
@@ -373,11 +510,55 @@ const normalizarPlaca = raw => {
   };
   const eliminarV = (id,placa) => { if(!confirm(`¿Eliminar ${placa}?`)) return; setVehiculos(p=>p.filter(v=>v.id!==id)); toast("Eliminado","success"); };
 
+  const abrirModalCelda = (c) => {
+    setModalCelda(c);
+    setCeldaSelectPlaca(c.vehiculo_placa || "");
+  };
+
+  const guardarCeldaAsignacion = () => {
+    if (!celdaSelectPlaca) {
+      toast("Debe seleccionar un vehículo", "warning");
+      return;
+    }
+    const vehiculo = vehiculos.find(v => v.placa === celdaSelectPlaca);
+    if (!vehiculo) {
+      toast("El vehículo no está registrado", "error");
+      return;
+    }
+    setCeldas(prev => prev.map(c => 
+      c.id === modalCelda.id ? { ...c, ocupada: true, vehiculo_id: vehiculo.id, vehiculo_placa: vehiculo.placa } : c
+    ));
+    toast(`Vehículo ${vehiculo.placa} asignado a la celda ${modalCelda.codigo}`, "success");
+    setModalCelda(null);
+  };
+
+  const liberarCelda = () => {
+    setCeldas(prev => prev.map(c => 
+      c.id === modalCelda.id ? { ...c, ocupada: false, vehiculo_id: null, vehiculo_placa: null } : c
+    ));
+    toast(`Celda ${modalCelda.codigo} liberada`, "success");
+    setModalCelda(null);
+  };
+
   const verificarPico = () => {
     const p = picoInput.toUpperCase().trim(); if(!p) return;
-    const d = now.getDay(); const digitos = PICO[d]||[];
-    const ultimo = parseInt(p.slice(-1));
-    setPicoRes({placa:p, afectada:digitos.includes(ultimo), digitos, dia:DIAS_FULL[d]});
+    
+    // Autodetección simple para el buscador manual:
+    // Si la placa termina en letra (ej. XYZ789A o 3ABC23), es moto.
+    // Si termina en número, asumimos carro.
+    let tipoSimulado = "Carro";
+    if (/[A-Z]$/.test(p)) {
+        tipoSimulado = "Moto";
+    }
+    
+    const validacion = validarPicoYPlacaHoy(p, tipoSimulado, now);
+    setPicoRes({
+        placa: p, 
+        afectada: validacion.activa, 
+        digitos: validacion.reglasDelDia, 
+        dia: DIAS_FULL[now.getDay()],
+        mensaje: validacion.mensaje
+    });
   };
 
   const buscarArchivos = () => {
@@ -394,6 +575,42 @@ const normalizarPlaca = raw => {
       if(fakeFiles.length) toast(`Encontrado en ${fakeFiles.length} archivo(s)`,"success");
       else toast("No se encontró en archivos","info");
     },2000);
+  };
+
+  const exportarBaseDatosPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Reporte de Vehículos Registrados", 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Fecha de generación: ${new Date().toLocaleString("es-CO")}`, 14, 28);
+    
+    let y = 40;
+    vehiculos.forEach((v, i) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${i + 1}. Placa: ${v.placa}`, 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      
+      const restricciones = [
+        v.mensualidad_atrasada ? `Mora ${v.meses_atrasados}m` : null,
+        v.conflicto_convivencia ? "Convivencia" : null
+      ].filter(Boolean).join(", ");
+
+      doc.text(`Propietario: ${v.propietario || "N/A"}  |  Residente: ${v.residente || "N/A"}`, 14, y + 6);
+      doc.text(`Torre/Apto: T${v.torre}-${v.apto}  |  Tipo: ${v.tipo}`, 14, y + 12);
+      doc.text(`Contacto: ${v.whatsapp || v.correo || "N/A"}`, 14, y + 18);
+      doc.text(`Estado: ${v.activo ? "Activo" : "Inactivo"}  |  Restricciones: ${restricciones || "Ninguna"}`, 14, y + 24);
+      
+      y += 34;
+    });
+
+    doc.save("Base_Datos_Vehiculos.pdf");
+    toast("✅ Base de datos exportada a PDF", "success");
   };
 
   const filtradosV = vehiculos.filter(v=>(v.placa+v.propietario+v.residente+v.apto+v.torre).toLowerCase().includes(buscarQ.toLowerCase()));
@@ -498,16 +715,20 @@ const activarCamara = async () => {
   }
 
   try {
-    // ✅ 1. Forzar solicitud de permiso (CLAVE)
-    const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    // ✅ 1. Forzar permiso (ya con cámara trasera)
+    const testStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
     testStream.getTracks().forEach(t => t.stop());
 
-    // ✅ 2. Abrir stream real
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    // ✅ 2. Abrir stream real (también trasera)
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
 
     streamRef.current = stream;
 
-    // ✅ 3. Enlazar al video (con pequeño delay para React)
+    // ✅ 3. Enlazar al video
     setTimeout(() => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -549,39 +770,29 @@ const activarCamara = async () => {
   const w = video.videoWidth;
   const h = video.videoHeight;
 
-  canvas.width = 640;
-  canvas.height = 200;
-
+  canvas.width = 800;
+  canvas.height = 300;
   const ctx = canvas.getContext("2d");
 
-  // 🔥 RECORTE CENTRAL (zona donde SIEMPRE está la placa)
-  ctx.drawImage(
-    video,
-    w * 0.15, h * 0.35,      // x, y
-    w * 0.7,  h * 0.35,      // ancho, alto
-    0, 0,
-    canvas.width,
-    canvas.height
-  );
-  
-  ctx.save();
-  ctx.scale(-1, 1);
-  ctx.drawImage(video, -w, 0, w, h);
-  ctx.restore();
-
-
-
-  // Blanco y negro agresivo
   const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = img.data;
 
   for (let i = 0; i < data.length; i += 4) {
-    const v = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    const b = v > 130 ? 255 : 0;
-    data[i] = data[i + 1] = data[i + 2] = b;
+    const gray = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
+    data[i] = data[i + 1] = data[i + 2] = gray;
+  }
+
+  // 🔥 CONTRASTE (CLAVE)
+  const factor = 1.8;
+  const intercept = 128 * (1 - factor);
+
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = data[i + 1] = data[i + 2] =
+      Math.min(255, Math.max(0, data[i] * factor + intercept));
   }
 
   ctx.putImageData(img, 0, 0);
+
   return canvas.toDataURL("image/png");
 };
 
@@ -831,7 +1042,7 @@ const activarCamara = async () => {
                           <td style={s.td}>{i.apto}</td>
                           <td style={s.td}><small>{i.fecha_hora}</small></td>
                           <td style={s.td}><span style={s.pill(i.permitido?"#e6f9f1":"#fef0ef",i.permitido?"#15a86b":"#e0271a")}>{i.permitido?"✓ OK":"✗ Neg."}</span></td>
-                          <td style={s.td}><Btn size="sm" color="outline" onClick={()=>toast(`🖨️ Tiquete #${String(i.id).padStart(6,"0")} — ${i.placa}`,"success")}>🖨️</Btn></td>
+                          <td style={s.td}><Btn size="sm" color="outline" onClick={()=>imprimirTiqueteHistorial(i)}>🖨️</Btn></td>
                         </tr>
                       ))}
                     </tbody>
@@ -897,7 +1108,7 @@ const activarCamara = async () => {
                         <td style={s.td}><small>{i.fecha_hora}</small></td>
                         <td style={s.td}><span style={s.pill(i.permitido?"#e6f9f1":"#fef0ef",i.permitido?"#15a86b":"#e0271a")}>{i.permitido?"✓ OK":"✗ Neg."}</span></td>
                         <td style={s.td}><small style={{color:"#e0271a"}}>{i.motivo_negacion||""}</small></td>
-                        <td style={s.td}><Btn size="sm" color="outline" onClick={()=>toast(`Tiquete #${String(i.id).padStart(6,"0")} — ${i.placa}`,"success")}>🖨️</Btn></td>
+                        <td style={s.td}><Btn size="sm" color="outline" onClick={()=>imprimirTiqueteHistorial(i)}>🖨️</Btn></td>
                       </tr>
                     ))}
                   </tbody>
@@ -916,11 +1127,12 @@ const activarCamara = async () => {
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(72px,1fr))",gap:8}}>
                 {celdas.map(c=>(
-                  <div key={c.id} style={{background:c.ocupada?"#fef0ef":"#e6f9f1",border:`2px solid ${c.ocupada?"#e0271a":"#15a86b"}`,borderRadius:8,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,cursor:"pointer"}}
-                    onClick={()=>toast(`Celda ${c.codigo} — Torre ${c.torre} Apto ${c.apto} — ${c.ocupada?"OCUPADA":"LIBRE"}`,c.ocupada?"error":"success")}>
+                  <div key={c.id} style={{background:c.ocupada?"#fef0ef":"#e6f9f1",border:`2px solid ${c.ocupada?"#e0271a":"#15a86b"}`,borderRadius:8,padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",justifyContent:"center"}}
+                    onClick={()=>abrirModalCelda(c)}>
                     <div style={{fontSize:16}}>{c.ocupada?"🔴":"🟢"}</div>
                     <div>{c.codigo}</div>
                     <div style={{fontWeight:400,color:"#b0c2dc",fontSize:9}}>T{c.torre}-{c.apto}</div>
+                    {c.ocupada && c.vehiculo_placa && <div style={{marginTop:4,fontSize:10,background:"#fff",padding:"2px 4px",borderRadius:4,color:"#e0271a"}}>{c.vehiculo_placa}</div>}
                   </div>
                 ))}
               </div>
@@ -931,14 +1143,14 @@ const activarCamara = async () => {
           {section==="pico"&&(
             <div>
               <div style={s.panel}>
-                <div style={s.panelTitle}>🚦 Pico y Placa — Bogotá</div>
-                <p style={{fontSize:12,color:"#b0c2dc",marginBottom:16}}>Horarios: 6:00–9:00 am y 3:00–7:00 pm</p>
+                <div style={s.panelTitle}>🚦 Pico y Placa — Medellín</div>
+                <p style={{fontSize:12,color:"#b0c2dc",marginBottom:16}}>Horario unificado: 5:00 a.m. a 8:00 p.m. <br/>(Carros usan último número, Motos usan primer número)</p>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
                   {[1,2,3,4,5].map(d=>(
                     <div key={d} style={{background:"#fff",border:`1px solid ${d===now.getDay()?"#0650a8":"#e2eaf5"}`,borderRadius:10,padding:"14px 8px",textAlign:"center",borderTop:`4px solid ${d===now.getDay()?"#0650a8":"#e2eaf5"}`}}>
                       <div style={{fontSize:11,fontWeight:700,color:d===now.getDay()?"#0650a8":"#b0c2dc",textTransform:"uppercase",marginBottom:8}}>{DIAS_FULL[d]}</div>
                       <div style={{display:"flex",gap:5,justifyContent:"center"}}>
-                        {(PICO[d-1]||[]).map(n=><div key={n} style={{width:28,height:28,borderRadius:7,background:d===now.getDay()?"#0650a8":"#e2eaf5",color:d===now.getDay()?"#fff":"#0d1b2e",fontWeight:800,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>{n}</div>)}
+                        {(REGLAS_PICO_PLACA_MEDELLIN[d]||[]).map(n=><div key={n} style={{width:28,height:28,borderRadius:7,background:d===now.getDay()?"#0650a8":"#e2eaf5",color:d===now.getDay()?"#fff":"#0d1b2e",fontWeight:800,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>{n}</div>)}
                       </div>
                       {d===now.getDay()&&<div style={{fontSize:9,color:"#0650a8",marginTop:6,fontWeight:700}}>HOY</div>}
                     </div>
@@ -948,54 +1160,73 @@ const activarCamara = async () => {
               <div style={s.panel}>
                 <div style={s.panelTitle}>🔍 Verificar Placa</div>
                 <div className="form-row-2" style={s.formRow}>
-                  <div><input style={{...s.formControl,fontFamily:"'JetBrains Mono',monospace",fontSize:18,fontWeight:700,textTransform:"uppercase",letterSpacing:4,textAlign:"center"}} placeholder="ABC123" maxLength={6} value={picoInput} onChange={e=>setPicoInput(e.target.value.toUpperCase())}/></div>
+                  <div><input style={{...s.formControl,fontFamily:"'JetBrains Mono',monospace",fontSize:18,fontWeight:700,textTransform:"uppercase",letterSpacing:4,textAlign:"center"}} placeholder="ABC123 o XYZ78A" maxLength={7} value={picoInput} onChange={e=>setPicoInput(e.target.value.toUpperCase())}/></div>
                   <div><Btn onClick={verificarPico}>🔍 Verificar</Btn></div>
                 </div>
                 {picoRes&&(
                   <div style={{...s.statusBox(picoRes.afectada?"denied":"allowed"),marginTop:14}}>
                     <span style={{fontSize:22}}>{picoRes.afectada?"⚠️":"✅"}</span>
                     <div>
-                      <div>Placa <b>{picoRes.placa}</b> — {picoRes.afectada?"TIENE PICO Y PLACA HOY":"Sin restricción hoy"}</div>
-                      {picoRes.afectada&&<div style={{fontSize:11,opacity:.8,marginTop:2}}>Dígito {picoRes.placa.slice(-1)} restringido — 6:00-9:00 y 15:00-19:00</div>}
+                      <div>Placa <b>{picoRes.placa}</b></div>
+                      <div style={{fontSize:12,opacity:.9,marginTop:4,lineHeight:1.4}}>{picoRes.mensaje}</div>
                     </div>
                   </div>
                 )}
+              </div>
+              
+              {/* Bloque de pruebas */}
+              <div style={s.panel}>
+                <div style={s.panelTitle}>🧪 Casos de Prueba (Pico y Placa)</div>
+                <div style={{fontSize:12, background:"#f4f7fc", padding:14, borderRadius:8, lineHeight:1.5}}>
+                    <p><b>Carro (Placa ABC123)</b>: Se evalúa el último dígito (<b>3</b>). En horario y día restringido, se bloquea la entrada.</p>
+                    <p><b>Moto (Placa 3ABC23) o (XYZ78A)</b>: Se evalúa el primer dígito (<b>3</b> o <b>7</b>). Al intentar ingresar como "Moto", el sistema detecta el primer número en lugar del último.</p>
+                    <p><b>Fuera de Horario (antes de 5am o después de 8pm)</b>: El sistema alerta que aunque la placa coincida, está permitido circular.</p>
+                    <p><b>Fin de semana</b>: Sábados y domingos no hay restricciones en el sistema.</p>
+                </div>
               </div>
             </div>
           )}
 
           {/* ──── ARCHIVOS ──── */}
           {section==="archivos"&&(
-            <div style={s.panel}>
-              <div style={s.panelTitle}>📁 Buscar Placa en Archivos del Equipo</div>
-              <p style={{fontSize:12,color:"#b0c2dc",marginBottom:16}}>Busca en archivos TXT, CSV, JSON, XLSX del sistema local.</p>
-              <div className="form-row-2" style={{...s.formRow,marginBottom:14}}>
-                <div style={s.formGroup}>
-                  <label style={s.formLabel}>Placa</label>
-                  <input style={{...s.formControl,fontFamily:"'JetBrains Mono',monospace",fontSize:18,fontWeight:700,textTransform:"uppercase",letterSpacing:4,textAlign:"center"}} placeholder="ABC123" maxLength={6} value={archivosPlaca} onChange={e=>setArchivosPlaca(e.target.value.toUpperCase())}/>
+            <div>
+              <div style={s.panel}>
+                <div style={s.panelTitle}>📁 Buscar Placa en Archivos del Equipo</div>
+                <p style={{fontSize:12,color:"#b0c2dc",marginBottom:16}}>Busca en archivos TXT, CSV, JSON, XLSX del sistema local.</p>
+                <div className="form-row-2" style={{...s.formRow,marginBottom:14}}>
+                  <div style={s.formGroup}>
+                    <label style={s.formLabel}>Placa</label>
+                    <input style={{...s.formControl,fontFamily:"'JetBrains Mono',monospace",fontSize:18,fontWeight:700,textTransform:"uppercase",letterSpacing:4,textAlign:"center"}} placeholder="ABC123" maxLength={6} value={archivosPlaca} onChange={e=>setArchivosPlaca(e.target.value.toUpperCase())}/>
+                  </div>
+                  <div style={s.formGroup}>
+                    <label style={s.formLabel}>Ruta</label>
+                    <input style={s.formControl} placeholder="C:\Users\Admin o /home/usuario"/>
+                  </div>
                 </div>
-                <div style={s.formGroup}>
-                  <label style={s.formLabel}>Ruta</label>
-                  <input style={s.formControl} placeholder="C:\Users\Admin o /home/usuario"/>
-                </div>
+                <Btn onClick={buscarArchivos} disabled={archivosLoading}>{archivosLoading?"⏳ Buscando...":"🔍 Iniciar Búsqueda"}</Btn>
+                {archivosRes!==null&&(
+                  <div style={{marginTop:16}}>
+                    {archivosRes.length>0 ? (
+                      <>
+                        <p style={{fontWeight:600,marginBottom:8}}>✅ Encontrado en {archivosRes.length} archivo(s):</p>
+                        {archivosRes.map((f,i)=>(
+                          <div key={i} style={{background:"#f4f7fc",borderRadius:8,padding:"8px 12px",marginBottom:6,fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#0a6edc",wordBreak:"break-all"}}>
+                            📄 {f}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div style={{...s.statusBox("pending"),marginTop:0}}>ℹ️ <span>No se encontró la placa en archivos del sistema</span></div>
+                    )}
+                  </div>
+                )}
               </div>
-              <Btn onClick={buscarArchivos} disabled={archivosLoading}>{archivosLoading?"⏳ Buscando...":"🔍 Iniciar Búsqueda"}</Btn>
-              {archivosRes!==null&&(
-                <div style={{marginTop:16}}>
-                  {archivosRes.length>0 ? (
-                    <>
-                      <p style={{fontWeight:600,marginBottom:8}}>✅ Encontrado en {archivosRes.length} archivo(s):</p>
-                      {archivosRes.map((f,i)=>(
-                        <div key={i} style={{background:"#f4f7fc",borderRadius:8,padding:"8px 12px",marginBottom:6,fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#0a6edc",wordBreak:"break-all"}}>
-                          📄 {f}
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <div style={{...s.statusBox("pending"),marginTop:0}}>ℹ️ <span>No se encontró la placa en archivos del sistema</span></div>
-                  )}
-                </div>
-              )}
+
+              <div style={s.panel}>
+                <div style={s.panelTitle}>📄 Exportar Reportes y Bases de Datos</div>
+                <p style={{fontSize:12,color:"#b0c2dc",marginBottom:16}}>Genera un reporte en PDF de todos los vehículos registrados y su estado actual (restricciones, mora, propietario, contacto).</p>
+                <Btn color="outline" onClick={exportarBaseDatosPDF}>🖨️ Exportar Vehículos a PDF</Btn>
+              </div>
             </div>
           )}
 
@@ -1021,6 +1252,36 @@ const activarCamara = async () => {
           ))}
         </div>
       </div>
+
+      {/* Modal Celda */}
+      {modalCelda&&(
+        <div style={s.modal} onClick={e=>e.target===e.currentTarget&&setModalCelda(null)}>
+          <div style={{...s.modalBox, width: "min(400px,95vw)"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+              <h2 style={{fontSize:17,fontWeight:800,color:"#0650a8"}}>Gestionar Celda {modalCelda.codigo}</h2>
+              <button style={{background:"#e2eaf5",border:"none",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:14}} onClick={()=>setModalCelda(null)}>✕</button>
+            </div>
+            
+            <div style={s.formGroup}>
+              <label style={s.formLabel}>Vehículo Asignado (Solo registrados)</label>
+              <select style={s.formControl} value={celdaSelectPlaca} onChange={e=>setCeldaSelectPlaca(e.target.value)}>
+                <option value="">-- Seleccionar Vehículo --</option>
+                {vehiculos.map(v => (
+                  <option key={v.id} value={v.placa}>{v.placa} ({v.tipo}) - {v.propietario || "Sin dueño"}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{...s.btnGroup, marginTop: 20}}>
+              <Btn color="success" onClick={guardarCeldaAsignacion}>💾 Guardar Asignación</Btn>
+              {modalCelda.ocupada && (
+                 <Btn color="danger" onClick={liberarCelda}>🔓 Liberar Celda</Btn>
+              )}
+              <Btn color="outline" onClick={()=>setModalCelda(null)}>Cancelar</Btn>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Vehículo */}
       {modalV&&(
